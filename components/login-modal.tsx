@@ -37,26 +37,26 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] bg-gradient-to-b from-purple-50 to-blue-50 rounded-xl">
         <DialogHeader>
-          <DialogTitle>Acesso Administrativo</DialogTitle>
+          <DialogTitle className="text-purple-700">Acesso Administrativo</DialogTitle>
           <DialogDescription>Entre com suas credenciais para acessar o painel administrativo.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          {error && <p className="text-sm font-medium text-destructive">{error}</p>}
+          {error && <p className="text-sm font-medium text-destructive bg-red-50 p-2 rounded-md">{error}</p>}
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="username" className="text-right">
+            <Label htmlFor="username" className="text-right text-purple-700">
               Usuário
             </Label>
             <Input
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="col-span-3"
+              className="col-span-3 border-purple-200 focus:border-purple-400"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="password" className="text-right">
+            <Label htmlFor="password" className="text-right text-purple-700">
               Senha
             </Label>
             <Input
@@ -64,12 +64,16 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="col-span-3"
+              className="col-span-3 border-purple-200 focus:border-purple-400"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button type="submit" onClick={handleLogin}>
+          <Button
+            type="submit"
+            onClick={handleLogin}
+            className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600"
+          >
             Entrar
           </Button>
         </DialogFooter>

@@ -15,8 +15,8 @@ export default function ImageThumbnail({ svgData, imageUrl, name, isSelected, on
   return (
     <div
       className={cn(
-        "w-14 h-14 bg-white rounded-md overflow-hidden cursor-pointer flex items-center justify-center p-1 border-2",
-        isSelected ? "border-primary" : "border-transparent hover:border-primary/50",
+        "w-16 h-16 bg-white rounded-xl overflow-hidden cursor-pointer flex items-center justify-center p-1 border-2 transition-all hover:scale-105",
+        isSelected ? "border-purple-500 shadow-lg scale-110" : "border-transparent hover:border-purple-300 shadow-md",
       )}
       onClick={onClick}
       title={name}

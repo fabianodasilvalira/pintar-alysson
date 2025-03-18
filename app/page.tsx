@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Paintbrush, Eraser, Trash2, Download } from "lucide-react"
+import { Paintbrush, Eraser, Trash2, Download, Sparkles } from "lucide-react"
 import ColorButton from "@/components/color-button"
 import ImageThumbnail from "@/components/image-thumbnail"
 import LoginModal from "@/components/login-modal"
@@ -439,6 +439,21 @@ export default function DrawingApp() {
     // Parse the SVG data to extract paths
     const parser = new DOMParser()
     const svgDoc = parser.parseFromString(svgData, "image/svg+xml")
+
+    // Obter o viewBox do SVG para manter a proporção correta
+    const svgElement = svgDoc.querySelector("svg")
+    let viewBox = { x: 0, y: 0, width: 200, height: 200 }
+
+    if (svgElement && svgElement.getAttribute("viewBox")) {
+      const viewBoxAttr = svgElement.getAttribute("viewBox")?.split(" ").map(Number) || [0, 0, 200, 200]
+      viewBox = {
+        x: viewBoxAttr[0] || 0,
+        y: viewBoxAttr[1] || 0,
+        width: viewBoxAttr[2] || 200,
+        height: viewBoxAttr[3] || 200,
+      }
+    }
+
     const paths = svgDoc.querySelectorAll("path, circle, rect, ellipse")
 
     // Save current context state
@@ -450,11 +465,31 @@ export default function DrawingApp() {
     context.lineCap = "round"
     context.lineJoin = "round"
 
-    // Scale to fit canvas
+    // Get canvas dimensions
     const canvas = canvasRef.current
-    const scale = Math.min(canvas.width / 200, canvas.height / 200) * 0.8
-    const offsetX = (canvas.width - 200 * scale) / 2
-    const offsetY = (canvas.height - 200 * scale) / 2
+    const canvasWidth = canvas.width
+    const canvasHeight = canvas.height
+
+    // Calcular a proporção do SVG
+    const svgRatio = viewBox.width / viewBox.height
+
+    // Calcular o tamanho máximo que podemos usar mantendo a proporção
+    let targetWidth, targetHeight
+
+    if (canvasWidth / svgRatio <= canvasHeight) {
+      // Limitado pela largura
+      targetWidth = canvasWidth * 0.8
+      targetHeight = targetWidth / svgRatio
+    } else {
+      // Limitado pela altura
+      targetHeight = canvasHeight * 0.8
+      targetWidth = targetHeight * svgRatio
+    }
+
+    // Calcular a escala e o deslocamento para centralizar
+    const scale = targetWidth / viewBox.width
+    const offsetX = (canvasWidth - targetWidth) / 2
+    const offsetY = (canvasHeight - targetHeight) / 2
 
     context.translate(offsetX, offsetY)
     context.scale(scale, scale)
@@ -567,24 +602,30 @@ export default function DrawingApp() {
     document.body.removeChild(link)
   }
 
+  // Também vamos melhorar a função loadImageToCanvas para manter a proporção correta
+
   return (
-    <div className="flex flex-col h-screen max-h-screen bg-background">
-      <header className="p-4 bg-primary text-primary-foreground text-center flex justify-between items-center">
+    <div className="flex flex-col h-screen max-h-screen bg-gradient-to-b from-blue-100 to-purple-100">
+      <header className="p-4 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white text-center flex justify-between items-center rounded-b-3xl shadow-lg">
         <div className="w-14"></div> {/* Spacer for centering */}
-        <h1 className="text-2xl font-bold">App de Desenho</h1>
+        <h1 className="text-2xl font-bold flex items-center">
+          <Sparkles className="h-6 w-6 mr-2 text-yellow-300" />
+          App de Desenho
+          <Sparkles className="h-6 w-6 ml-2 text-yellow-300" />
+        </h1>
         <div className="flex items-center">
           <Button
             variant="outline"
             size="icon"
             onClick={downloadDrawing}
-            className="h-10 w-10 bg-primary-foreground mr-2"
+            className="h-10 w-10 bg-white text-purple-500 hover:bg-yellow-100 mr-2 rounded-full shadow-md"
             title="Baixar Desenho"
           >
             <Download className="h-6 w-6" />
             <span className="sr-only">Baixar</span>
           </Button>
           <span
-            className="text-xs text-primary-foreground/70 cursor-pointer select-none"
+            className="text-xs text-white/90 cursor-pointer select-none hover:text-yellow-200 transition-colors"
             onMouseDown={handleAdminButtonPress}
             onMouseUp={handleAdminButtonRelease}
             onTouchStart={handleAdminButtonPress}
@@ -599,9 +640,9 @@ export default function DrawingApp() {
         {/* Mobile layout - stacked vertically */}
         <div className="flex flex-col h-full">
           {/* Drawing thumbnails at the top on mobile */}
-          <div className="p-2 bg-muted flex flex-wrap justify-center gap-2">
-            <p className="w-full text-center text-xs font-medium mb-1">Desenhos</p>
-            <div className="flex flex-wrap justify-center gap-2">
+          <div className="p-3 bg-gradient-to-r from-blue-200 to-purple-200 flex flex-wrap justify-center gap-2 rounded-b-2xl shadow-md">
+            <p className="w-full text-center text-sm font-bold mb-1 text-purple-700">Escolha um Desenho</p>
+            <div className="flex flex-wrap justify-center gap-3">
               {outlines.map((outline) => (
                 <ImageThumbnail
                   key={outline.id}
@@ -616,14 +657,18 @@ export default function DrawingApp() {
           </div>
 
           {/* Tools below thumbnails */}
-          <div className="p-2 bg-muted/50 flex justify-center gap-2">
+          <div className="p-3 bg-gradient-to-r from-green-200 to-blue-200 flex justify-center gap-3 shadow-md">
             <Button
               variant={tool === "brush" ? "default" : "outline"}
               size="icon"
               onClick={() => handleToolSelect("brush")}
-              className="h-12 w-12"
+              className={`h-14 w-14 rounded-full shadow-md transition-transform hover:scale-110 ${
+                tool === "brush"
+                  ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white"
+                  : "bg-white text-purple-500 hover:bg-yellow-100"
+              }`}
             >
-              <Paintbrush className="h-6 w-6" />
+              <Paintbrush className="h-7 w-7" />
               <span className="sr-only">Pincel</span>
             </Button>
 
@@ -631,40 +676,51 @@ export default function DrawingApp() {
               variant={tool === "eraser" ? "default" : "outline"}
               size="icon"
               onClick={() => handleToolSelect("eraser")}
-              className="h-12 w-12"
+              className={`h-14 w-14 rounded-full shadow-md transition-transform hover:scale-110 ${
+                tool === "eraser"
+                  ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white"
+                  : "bg-white text-purple-500 hover:bg-yellow-100"
+              }`}
             >
-              <Eraser className="h-6 w-6" />
+              <Eraser className="h-7 w-7" />
               <span className="sr-only">Borracha</span>
             </Button>
 
-            <Button variant="outline" size="icon" onClick={clearCanvas} className="h-12 w-12">
-              <Trash2 className="h-6 w-6" />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={clearCanvas}
+              className="h-14 w-14 rounded-full shadow-md bg-white text-purple-500 hover:bg-red-100 transition-transform hover:scale-110"
+            >
+              <Trash2 className="h-7 w-7" />
               <span className="sr-only">Limpar</span>
             </Button>
           </div>
 
           {/* Drawing area - 70% of mobile height */}
-          <div className="flex-1 relative" style={{ height: "70vh" }}>
-            <canvas
-              ref={canvasRef}
-              className="absolute top-0 left-0 w-full h-full touch-none bg-white"
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-              onTouchStart={startDrawing}
-              onTouchMove={draw}
-              onTouchEnd={stopDrawing}
-            />
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/30">
-                <div className="text-lg font-medium">Carregando desenho...</div>
-              </div>
-            )}
+          <div className="flex-1 relative p-2" style={{ height: "70vh" }}>
+            <div className="w-full h-full rounded-2xl overflow-hidden shadow-lg border-4 border-yellow-300">
+              <canvas
+                ref={canvasRef}
+                className="absolute top-0 left-0 w-full h-full touch-none bg-white"
+                onMouseDown={startDrawing}
+                onMouseMove={draw}
+                onMouseUp={stopDrawing}
+                onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing}
+                onTouchMove={draw}
+                onTouchEnd={stopDrawing}
+              />
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/30">
+                  <div className="text-lg font-medium bg-white p-3 rounded-xl shadow-md">Carregando desenho...</div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Color palette at the bottom */}
-          <div className="p-2 bg-muted flex flex-wrap justify-center gap-2 mt-auto">
+          <div className="p-3 bg-gradient-to-r from-yellow-200 to-orange-200 flex flex-wrap justify-center gap-3 mt-auto rounded-t-2xl shadow-md">
             {colors.map((colorItem) => (
               <ColorButton
                 key={colorItem.color}

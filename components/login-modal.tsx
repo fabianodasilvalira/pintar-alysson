@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -11,35 +11,39 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import necessário para esconder o título visualmente
 
 interface LoginModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onLogin: (success: boolean) => void
+  isOpen: boolean;
+  onClose: () => void;
+  onLogin: (success: boolean) => void;
 }
 
 export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleLogin = () => {
     // Check credentials
-    if (username === "fabiano" && password === "fab231282") {
-      onLogin(true)
-      onClose()
+    if (username === "Admin" && password === "admin123") {
+      onLogin(true);
+      onClose();
     } else {
-      setError("Credenciais inválidas. Tente novamente.")
-      onLogin(false)
+      setError("Credenciais inválidas. Tente novamente.");
+      onLogin(false);
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-gradient-to-b from-purple-50 to-blue-50 rounded-xl">
         <DialogHeader>
-          <DialogTitle className="text-purple-700">Acesso Administrativo</DialogTitle>
+          {/* Se quiser esconder o título, use o VisuallyHidden */}
+          <VisuallyHidden>
+            <DialogTitle>Acesso Administrativo</DialogTitle>
+          </VisuallyHidden>
           <DialogDescription>Entre com suas credenciais para acessar o painel administrativo.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -79,6 +83,5 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

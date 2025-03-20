@@ -4,7 +4,9 @@ import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Paintbrush, Eraser, Trash2 } from "lucide-react"
+// Corrigir o ícone da ferramenta de linha (substituir Square por um ícone apropriado)
+// Importar o ícone de linha
+import { Paintbrush, Eraser, Trash2, Droplet, Circle, Square, Minus } from "lucide-react"
 import ImageThumbnail from "@/components/image-thumbnail"
 import LoginModal from "@/components/login-modal"
 import AdminPanel from "@/components/admin-panel"
@@ -13,13 +15,22 @@ export default function DrawingApp() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null)
   const [isDrawing, setIsDrawing] = useState(false)
-  const [tool, setTool] = useState<"brush" | "eraser">("brush")
+  // Modificar o tipo de ferramenta para incluir "circle" e "square"
+  const [tool, setTool] = useState<"brush" | "eraser" | "fill" | "circle" | "square" | "line">("brush")
   const [color, setColor] = useState("#FF0000") // Red as default
   const [selectedOutline, setSelectedOutline] = useState<string | null>(null)
   const [brushSize, setBrushSize] = useState(5)
   const [eraserSize, setEraserSize] = useState(50) // 10x larger eraser
   const [isLoading, setIsLoading] = useState(false)
   const [lastAudio, setLastAudio] = useState<{ text: string; timestamp: number }>({ text: "", timestamp: 0 })
+
+  // Adicionar estado para armazenar o ponto inicial do desenho de formas
+  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null)
+  // Adicionar estado para controlar o popup de espessura do pincel
+  const [showBrushSizes, setShowBrushSizes] = useState(false)
+  const [brushSizeTimer, setBrushSizeTimer] = useState<NodeJS.Timeout | null>(null)
+  // Adicionar estado para armazenar a imagem do canvas antes de começar a desenhar formas
+  const [canvasSnapshot, setCanvasSnapshot] = useState<ImageData | null>(null)
 
   // Admin panel states
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -290,20 +301,248 @@ export default function DrawingApp() {
     }
   }
 
-  // Função para iniciar o desenho
+  // Adicionar a função de preenchimento (flood fill)
+  const floodFill = (startX: number, startY: number, fillColor: string) => {
+    if (!context || !canvasRef.current) return
+
+    const canvas = canvasRef.current
+    const ctx = context
+
+    // Obter os dados da imagem
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const data = imageData.data
+    const width = imageData.width
+    const height = imageData.height
+
+    // Converter as coordenadas para inteiros
+    startX = Math.floor(startX)
+    startY = Math.floor(startY)
+
+    // Obter a cor do pixel inicial (RGBA)
+    const startPos = (startY * width + startX) * 4
+    const startR = data[startPos]
+    const startG = data[startPos + 1]
+    const startB = data[startPos + 2]
+    const startA = data[startPos + 3]
+
+    // Se o pixel já tem a cor de preenchimento, não fazer nada
+    const fillRGB = hexToRgb(fillColor)
+    if (!fillRGB) return
+
+    if (startR === fillRGB.r && startG === fillRGB.g && startB === fillRGB.b) {
+      return
+    }
+
+    // Função para verificar se um pixel tem a mesma cor do pixel inicial
+    const isSameColor = (pos: number) => {
+      // Tolerância para comparação de cores
+      const tolerance = 10
+      return (
+        Math.abs(data[pos] - startR) <= tolerance &&
+        Math.abs(data[pos + 1] - startG) <= tolerance &&
+        Math.abs(data[pos + 2] - startB) <= tolerance &&
+        Math.abs(data[pos + 3] - startA) <= tolerance
+      )
+    }
+
+    // Função para definir a cor de um pixel
+    const setColor = (pos: number) => {
+      data[pos] = fillRGB.r
+      data[pos + 1] = fillRGB.g
+      data[pos + 2] = fillRGB.b
+      data[pos + 3] = 255 // Opacidade total
+    }
+
+    // Algoritmo de preenchimento (flood fill)
+    const stack: [number, number][] = [[startX, startY]]
+    const visited = new Set<string>()
+
+    while (stack.length > 0) {
+      const [x, y] = stack.pop()!
+      const key = `${x},${y}`
+
+      if (x < 0 || x >= width || y < 0 || y >= height || visited.has(key)) {
+        continue
+      }
+
+      const pos = (y * width + x) * 4
+
+      if (!isSameColor(pos)) {
+        continue
+      }
+
+      setColor(pos)
+      visited.add(key)
+
+      // Adicionar os pixels vizinhos à pilha
+      stack.push([x + 1, y])
+      stack.push([x - 1, y])
+      stack.push([x, y + 1])
+      stack.push([x, y - 1])
+    }
+
+    // Atualizar a imagem no canvas
+    ctx.putImageData(imageData, 0, 0)
+  }
+
+  // Função auxiliar para converter hex para RGB
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result
+      ? {
+          r: Number.parseInt(result[1], 16),
+          g: Number.parseInt(result[2], 16),
+          b: Number.parseInt(result[3], 16),
+        }
+      : null
+  }
+
+  // Função para desenhar um círculo
+  const drawCircle = (startX: number, startY: number, endX: number, endY: number) => {
+    if (!context || !canvasRef.current) return
+
+    // Calcular o raio com base na distância entre os pontos
+    const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2))
+
+    // Desenhar o círculo
+    context.beginPath()
+    context.arc(startX, startY, radius, 0, Math.PI * 2)
+    context.stroke()
+  }
+
+  // Função para desenhar um quadrado
+  const drawSquare = (startX: number, startY: number, endX: number, endY: number) => {
+    if (!context || !canvasRef.current) return
+
+    // Calcular o tamanho do quadrado (usar o maior lado para garantir um quadrado perfeito)
+    const size = Math.max(Math.abs(endX - startX), Math.abs(endY - startY))
+
+    // Determinar a direção (para manter o ponto inicial como referência)
+    const dirX = endX >= startX ? 1 : -1
+    const dirY = endY >= startY ? 1 : -1
+
+    // Desenhar o quadrado
+    context.beginPath()
+    context.rect(startX, startY, size * dirX, size * dirY)
+    context.stroke()
+  }
+
+  // Modificar a função handleToolSelect para incluir a linha
+  const handleToolSelect = (selectedTool: "brush" | "eraser" | "fill" | "circle" | "square" | "line") => {
+    setTool(selectedTool)
+    setShowBrushSizes(false) // Esconder o popup de espessuras ao trocar de ferramenta
+
+    // Play audio feedback based on the selected tool
+    if (selectedTool === "brush") {
+      playAudio("Pincel")
+    } else if (selectedTool === "eraser") {
+      playAudio("Borracha")
+    } else if (selectedTool === "fill") {
+      playAudio("Balde de tinta")
+    } else if (selectedTool === "circle") {
+      playAudio("Círculo")
+    } else if (selectedTool === "square") {
+      playAudio("Quadrado")
+    } else if (selectedTool === "line") {
+      playAudio("Linha")
+    }
+  }
+
+  // Adicionar função para lidar com o pressionar longo no botão do pincel
+  const handleBrushPress = () => {
+    const timer = setTimeout(() => {
+      setShowBrushSizes(true)
+    }, 1000) // 1 segundo de pressão para mostrar as opções
+
+    setBrushSizeTimer(timer)
+  }
+
+  // Adicionar função para lidar com a liberação do botão do pincel
+  const handleBrushRelease = () => {
+    if (brushSizeTimer) {
+      clearTimeout(brushSizeTimer)
+      setBrushSizeTimer(null)
+    }
+
+    // Se não estiver mostrando as opções de tamanho, selecione a ferramenta
+    if (!showBrushSizes) {
+      handleToolSelect("brush")
+    }
+  }
+
+  // Adicionar função para selecionar o tamanho do pincel
+  const handleBrushSizeSelect = (size: number) => {
+    setBrushSize(size)
+    setShowBrushSizes(false)
+    handleToolSelect("brush")
+    playAudio(`Pincel tamanho ${size}`)
+  }
+
+  // Modificar o estado para ter uma espessura global
+  const [lineWidth, setLineWidth] = useState(5) // Espessura global para todas as ferramentas
+  const [showThicknessOptions, setShowThicknessOptions] = useState(false)
+
+  // Modificar a função handleBrushSizeSelect para aplicar a todas as ferramentas
+  const handleThicknessSelect = (size: number) => {
+    setLineWidth(size)
+    setShowThicknessOptions(false)
+
+    // Atualizar o contexto com a nova espessura
+    if (context) {
+      context.lineWidth = size
+    }
+
+    playAudio(`Espessura ${size}`)
+  }
+
+  // Modificar a função startDrawing para incluir a linha
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!context || !canvasRef.current) return
 
     const { x, y } = getCoordinates(e)
 
+    // Se a ferramenta for o balde de tinta, preencher a área
+    if (tool === "fill") {
+      floodFill(x, y, color)
+      return
+    }
+
+    // Se for círculo, quadrado ou linha, salvar o ponto inicial e o estado atual do canvas
+    if (tool === "circle" || tool === "square" || tool === "line") {
+      setStartPoint({ x, y })
+
+      // Salvar o estado atual do canvas
+      const canvas = canvasRef.current
+      setCanvasSnapshot(context.getImageData(0, 0, canvas.width, canvas.height))
+
+      // Configurar o contexto para desenhar apenas o contorno
+      context.strokeStyle = color
+      context.lineWidth = tool === "eraser" ? eraserSize : lineWidth
+      context.fillStyle = "transparent"
+
+      setIsDrawing(true)
+      return
+    }
+
     setIsDrawing(true)
     context.beginPath()
     context.moveTo(x, y)
     context.strokeStyle = tool === "brush" ? color : "#FFFFFF"
-    context.lineWidth = tool === "brush" ? brushSize : eraserSize
+    context.lineWidth = tool === "eraser" ? eraserSize : lineWidth
   }
 
-  // Função para desenhar
+  // Adicionar função para desenhar uma linha
+  const drawLine = (startX: number, startY: number, endX: number, endY: number) => {
+    if (!context || !canvasRef.current) return
+
+    // Desenhar a linha
+    context.beginPath()
+    context.moveTo(startX, startY)
+    context.lineTo(endX, endY)
+    context.stroke()
+  }
+
+  // Modificar a função draw para incluir a prévia de linha
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!context || !canvasRef.current || !isDrawing) return
 
@@ -315,47 +554,52 @@ export default function DrawingApp() {
     // Obter coordenadas precisas
     const { x, y } = getCoordinates(e)
 
+    // Se for círculo, quadrado ou linha, desenhar a prévia
+    if ((tool === "circle" || tool === "square" || tool === "line") && startPoint && canvasSnapshot) {
+      // Restaurar o canvas ao estado antes de começar a desenhar
+      context.putImageData(canvasSnapshot, 0, 0)
+
+      // Desenhar a forma de acordo com a ferramenta selecionada
+      if (tool === "circle") {
+        drawCircle(startPoint.x, startPoint.y, x, y)
+      } else if (tool === "square") {
+        drawSquare(startPoint.x, startPoint.y, x, y)
+      } else if (tool === "line") {
+        drawLine(startPoint.x, startPoint.y, x, y)
+      }
+
+      return
+    }
+
+    // Para pincel e borracha, continuar com o comportamento normal
     context.lineTo(x, y)
     context.stroke()
   }
 
-  // Função para parar o desenho
+  // Modificar a função stopDrawing para finalizar o desenho de círculo e quadrado
   const stopDrawing = () => {
     if (!context) return
+
+    // Limpar os estados de desenho de formas
+    setStartPoint(null)
+    setCanvasSnapshot(null)
 
     setIsDrawing(false)
     context.closePath()
   }
 
-  // Clear canvas
+  // Modificar a função clearCanvas para garantir que limpe completamente
   const clearCanvas = () => {
     if (!context || !canvasRef.current) return
+
+    // Limpar completamente o canvas
     context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
 
-    // Se houver um desenho selecionado, redesenhá-lo
-    if (selectedOutline) {
-      const outline = outlines.find((o) => o.id === selectedOutline)
-      if (outline && outline.svgData) {
-        renderSVGDirectly(outline.svgData)
-      }
-    } else {
-      setSelectedOutline(null)
-    }
+    // Resetar o estado do desenho selecionado
+    setSelectedOutline(null)
 
     // Play audio feedback for clearing the canvas
     playAudio("Limpar tudo")
-  }
-
-  // Função para selecionar a ferramenta
-  const handleToolSelect = (selectedTool: "brush" | "eraser") => {
-    setTool(selectedTool)
-
-    // Play audio feedback based on the selected tool
-    if (selectedTool === "brush") {
-      playAudio("Pincel")
-    } else if (selectedTool === "eraser") {
-      playAudio("Borracha")
-    }
   }
 
   // Handle color selection
@@ -646,23 +890,21 @@ export default function DrawingApp() {
             onTouchStart={handleAdminButtonPress}
             onTouchEnd={handleAdminButtonRelease}
           >
-            Alysson Lira
+            Allyson Lira
           </h1>
           <div className="text-xs opacity-70">Desenvolvido por Fabiano Lira</div>
         </div>
-
-        {/* Ferramentas no meio */}
-        <div className="flex items-center space-x-2 mx-auto">
+        <div className="flex items-center space-x-3 mx-auto">
           <Button
             variant={tool === "brush" ? "default" : "outline"}
             size="icon"
             onClick={() => handleToolSelect("brush")}
-            className={`h-10 w-10 rounded-full ${
+            className={`h-12 w-12 rounded-full ${
               tool === "brush" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
             }`}
             title="Pincel"
           >
-            <Paintbrush className="h-5 w-5" />
+            <Paintbrush className="h-6 w-6" />
             <span className="sr-only">Pincel</span>
           </Button>
 
@@ -670,23 +912,113 @@ export default function DrawingApp() {
             variant={tool === "eraser" ? "default" : "outline"}
             size="icon"
             onClick={() => handleToolSelect("eraser")}
-            className={`h-10 w-10 rounded-full ${
+            className={`h-12 w-12 rounded-full ${
               tool === "eraser" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
             }`}
             title="Borracha"
           >
-            <Eraser className="h-5 w-5" />
+            <Eraser className="h-6 w-6" />
             <span className="sr-only">Borracha</span>
           </Button>
+
+          <Button
+            variant={tool === "fill" ? "default" : "outline"}
+            size="icon"
+            onClick={() => handleToolSelect("fill")}
+            className={`h-12 w-12 rounded-full ${
+              tool === "fill" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
+            }`}
+            title="Balde de Tinta"
+          >
+            <Droplet className="h-6 w-6" />
+            <span className="sr-only">Balde de Tinta</span>
+          </Button>
+
+          <Button
+            variant={tool === "line" ? "default" : "outline"}
+            size="icon"
+            onClick={() => handleToolSelect("line")}
+            className={`h-12 w-12 rounded-full ${
+              tool === "line" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
+            }`}
+            title="Linha"
+          >
+            <Minus className="h-6 w-6" />
+            <span className="sr-only">Linha</span>
+          </Button>
+
+          <Button
+            variant={tool === "circle" ? "default" : "outline"}
+            size="icon"
+            onClick={() => handleToolSelect("circle")}
+            className={`h-12 w-12 rounded-full ${
+              tool === "circle" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
+            }`}
+            title="Círculo"
+          >
+            <Circle className="h-6 w-6" />
+            <span className="sr-only">Círculo</span>
+          </Button>
+
+          <Button
+            variant={tool === "square" ? "default" : "outline"}
+            size="icon"
+            onClick={() => handleToolSelect("square")}
+            className={`h-12 w-12 rounded-full ${
+              tool === "square" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
+            }`}
+            title="Quadrado"
+          >
+            <Square className="h-6 w-6" />
+            <span className="sr-only">Quadrado</span>
+          </Button>
+
+          {/* Botão de espessura */}
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowThicknessOptions(!showThicknessOptions)}
+              className="h-12 w-12 rounded-full bg-purple-600/20 text-white hover:bg-purple-600/40"
+              title="Espessura"
+            >
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 12h12" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+                <path d="M6 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <path d="M6 16h12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              <span className="sr-only">Espessura</span>
+            </Button>
+
+            {showThicknessOptions && (
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 bg-white rounded-md shadow-md p-2 flex flex-col space-y-2 z-10 mt-2 w-32">
+                <div className="text-xs font-medium text-center text-gray-700 mb-1">Espessura</div>
+                {[
+                  { size: 3, name: "Fino" },
+                  { size: 5, name: "Médio" },
+                  { size: 8, name: "Grosso" },
+                ].map((option) => (
+                  <button
+                    key={option.size}
+                    className="px-3 py-2 rounded hover:bg-gray-100 flex items-center"
+                    onClick={() => handleThicknessSelect(option.size)}
+                  >
+                    <div className="w-12 mr-2 bg-purple-600 rounded-full" style={{ height: `${option.size}px` }} />
+                    <span className="text-sm">{option.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <Button
             variant="outline"
             size="icon"
             onClick={clearCanvas}
-            className="h-10 w-10 rounded-full bg-purple-600/20 text-white hover:bg-purple-600/40"
+            className="h-12 w-12 rounded-full bg-red-500/80 text-white hover:bg-red-600"
             title="Limpar Tudo"
           >
-            <Trash2 className="h-5 w-5" />
+            <Trash2 className="h-6 w-6" />
             <span className="sr-only">Limpar</span>
           </Button>
         </div>

@@ -2,20 +2,42 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-// Corrigir o ícone da ferramenta de linha (substituir Square por um ícone apropriado)
-// Importar o ícone de linha
-import { Paintbrush, Eraser, Trash2, Droplet, Circle, Square, Minus } from "lucide-react"
+import { Paintbrush, Eraser, Trash2, Droplet, Circle, Square, Minus, Share2 } from "lucide-react"
 import ImageThumbnail from "@/components/image-thumbnail"
 import LoginModal from "@/components/login-modal"
 import AdminPanel from "@/components/admin-panel"
+import { useEffect } from "react"
+
+// Adicionar estilo global para esconder a barra de rolagem
+const useHideScrollbar = () => {
+  useEffect(() => {
+    // Adicionar estilo para esconder a barra de rolagem
+    const style = document.createElement("style")
+    style.textContent = `
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    `
+    document.head.appendChild(style)
+
+    return () => {
+      document.head.removeChild(style)
+    }
+  }, [])
+}
 
 export default function DrawingApp() {
+  useHideScrollbar()
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null)
   const [isDrawing, setIsDrawing] = useState(false)
-  // Modificar o tipo de ferramenta para incluir "circle" e "square"
   const [tool, setTool] = useState<"brush" | "eraser" | "fill" | "circle" | "square" | "line">("brush")
   const [color, setColor] = useState("#FF0000") // Red as default
   const [selectedOutline, setSelectedOutline] = useState<string | null>(null)
@@ -44,98 +66,98 @@ export default function DrawingApp() {
       id: "sun",
       name: "Sol",
       svgData: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <!-- Sun circle -->
-        <circle fill="none" stroke="black" strokeWidth="2" cx="100" cy="100" r="40" />
-        <!-- Sun rays -->
-        <path fill="none" stroke="black" strokeWidth="2" d="M100,40 L100,20" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M100,180 L100,160" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M40,100 L20,100" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M180,100 L160,100" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M60,60 L45,45" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M140,60 L155,45" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M60,140 L45,155" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M140,140 L155,155" />
-        <!-- Sun face -->
-        <circle fill="none" stroke="black" strokeWidth="2" cx="85" cy="90" r="5" />
-        <circle fill="none" stroke="black" strokeWidth="2" cx="115" cy="90" r="5" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M80,115 Q100,130 120,115" />
-      </svg>`,
+      <!-- Sun circle -->
+      <circle fill="none" stroke="black" strokeWidth="2" cx="100" cy="100" r="40" />
+      <!-- Sun rays -->
+      <path fill="none" stroke="black" strokeWidth="2" d="M100,40 L100,20" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M100,180 L100,160" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M40,100 L20,100" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M180,100 L160,100" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M60,60 L45,45" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M140,60 L155,45" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M60,140 L45,155" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M140,140 L155,155" />
+      <!-- Sun face -->
+      <circle fill="none" stroke="black" strokeWidth="2" cx="85" cy="90" r="5" />
+      <circle fill="none" stroke="black" strokeWidth="2" cx="115" cy="90" r="5" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M80,115 Q100,130 120,115" />
+    </svg>`,
     },
     {
       id: "house",
       name: "Casa",
       svgData: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <!-- House base -->
-        <rect fill="none" stroke="black" strokeWidth="2" x="40" y="80" width="120" height="100" />
-        <!-- Roof -->
-        <path fill="none" stroke="black" strokeWidth="2" d="M30,80 L100,20 L170,80" />
-        <!-- Door -->
-        <rect fill="none" stroke="black" strokeWidth="2" x="85" y="130" width="30" height="50" />
-        <circle fill="none" stroke="black" strokeWidth="2" cx="105" cy="155" r="3" />
-        <!-- Windows -->
-        <rect fill="none" stroke="black" strokeWidth="2" x="55" y="100" width="25" height="25" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M55,112.5 L80,112.5" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M67.5,100 L67.5,125" />
-        <!-- Second window -->
-        <rect fill="none" stroke="black" strokeWidth="2" x="120" y="100" width="25" height="25" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M120,112.5 L145,112.5" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M132.5,100 L132.5,125" />
-        <!-- Chimney -->
-        <path fill="none" stroke="black" strokeWidth="2" d="M130,50 L130,20 L150,20 L150,60" />
-      </svg>`,
+      <!-- House base -->
+      <rect fill="none" stroke="black" strokeWidth="2" x="40" y="80" width="120" height="100" />
+      <!-- Roof -->
+      <path fill="none" stroke="black" strokeWidth="2" d="M30,80 L100,20 L170,80" />
+      <!-- Door -->
+      <rect fill="none" stroke="black" strokeWidth="2" x="85" y="130" width="30" height="50" />
+      <circle fill="none" stroke="black" strokeWidth="2" cx="105" cy="155" r="3" />
+      <!-- Windows -->
+      <rect fill="none" stroke="black" strokeWidth="2" x="55" y="100" width="25" height="25" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M55,112.5 L80,112.5" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M67.5,100 L67.5,125" />
+      <!-- Second window -->
+      <rect fill="none" stroke="black" strokeWidth="2" x="120" y="100" width="25" height="25" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M120,112.5 L145,112.5" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M132.5,100 L132.5,125" />
+      <!-- Chimney -->
+      <path fill="none" stroke="black" strokeWidth="2" d="M130,50 L130,20 L150,20 L150,60" />
+    </svg>`,
     },
     {
       id: "car",
       name: "Carro",
       svgData: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <!-- Car body -->
-        <path fill="none" stroke="black" strokeWidth="2" d="M30,120 L30,140 L170,140 L170,120 L140,90 L60,90 L30,120 Z" />
-        <!-- Windows -->
-        <path fill="none" stroke="black" strokeWidth="2" d="M60,90 L70,70 L130,70 L140,90" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M80,90 L85,70" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M120,90 L115,70" />
-        <!-- Wheels -->
-        <circle fill="none" stroke="black" strokeWidth="2" cx="60" cy="140" r="15" />
-        <circle fill="none" stroke="black" strokeWidth="2" cx="140" cy="140" r="15" />
-        <!-- Headlights -->
-        <rect fill="none" stroke="black" strokeWidth="2" x="35" y="110" width="10" height="10" />
-        <rect fill="none" stroke="black" strokeWidth="2" x="155" y="110" width="10" height="10" />
-        <!-- Door -->
-        <path fill="none" stroke="black" strokeWidth="2" d="M85,90 L85,130" />
-        <circle fill="none" stroke="black" strokeWidth="2" cx="95" cy="110" r="3" />
-      </svg>`,
+      <!-- Car body -->
+      <path fill="none" stroke="black" strokeWidth="2" d="M30,120 L30,140 L170,140 L170,120 L140,90 L60,90 L30,120 Z" />
+      <!-- Windows -->
+      <path fill="none" stroke="black" strokeWidth="2" d="M60,90 L70,70 L130,70 L140,90" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M80,90 L85,70" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M120,90 L115,70" />
+      <!-- Wheels -->
+      <circle fill="none" stroke="black" strokeWidth="2" cx="60" cy="140" r="15" />
+      <circle fill="none" stroke="black" strokeWidth="2" cx="140" cy="140" r="15" />
+      <!-- Headlights -->
+      <rect fill="none" stroke="black" strokeWidth="2" x="35" y="110" width="10" height="10" />
+      <rect fill="none" stroke="black" strokeWidth="2" x="155" y="110" width="10" height="10" />
+      <!-- Door -->
+      <path fill="none" stroke="black" strokeWidth="2" d="M85,90 L85,130" />
+      <circle fill="none" stroke="black" strokeWidth="2" cx="95" cy="110" r="3" />
+    </svg>`,
     },
     {
       id: "butterfly",
       name: "Borboleta",
       svgData: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <!-- Body -->
-        <path fill="none" stroke="black" strokeWidth="2" d="M100,50 L100,150" />
-        <!-- Antennae -->
-        <path fill="none" stroke="black" strokeWidth="2" d="M100,50 L85,30" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M100,50 L115,30" />
-        <!-- Wings -->
-        <path fill="none" stroke="black" strokeWidth="2" d="M100,70 C60,40 40,70 50,100 C40,130 60,160 100,130" />
-        <path fill="none" stroke="black" strokeWidth="2" d="M100,70 C140,40 160,70 150,100 C160,130 140,160 100,130" />
-        <!-- Wing patterns -->
-        <circle fill="none" stroke="black" strokeWidth="2" cx="75" cy="85" r="10" />
-        <circle fill="none" stroke="black" strokeWidth="2" cx="125" cy="85" r="10" />
-        <circle fill="none" stroke="black" strokeWidth="2" cx="75" cy="115" r="8" />
-        <circle fill="none" stroke="black" strokeWidth="2" cx="125" cy="115" r="8" />
-      </svg>`,
+      <!-- Body -->
+      <path fill="none" stroke="black" strokeWidth="2" d="M100,50 L100,150" />
+      <!-- Antennae -->
+      <path fill="none" stroke="black" strokeWidth="2" d="M100,50 L85,30" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M100,50 L115,30" />
+      <!-- Wings -->
+      <path fill="none" stroke="black" strokeWidth="2" d="M100,70 C60,40 40,70 50,100 C40,130 60,160 100,130" />
+      <path fill="none" stroke="black" strokeWidth="2" d="M100,70 C140,40 160,70 150,100 C160,130 140,160 100,130" />
+      <!-- Wing patterns -->
+      <circle fill="none" stroke="black" strokeWidth="2" cx="75" cy="85" r="10" />
+      <circle fill="none" stroke="black" strokeWidth="2" cx="125" cy="85" r="10" />
+      <circle fill="none" stroke="black" strokeWidth="2" cx="75" cy="115" r="8" />
+      <circle fill="none" stroke="black" strokeWidth="2" cx="125" cy="115" r="8" />
+    </svg>`,
     },
     {
       id: "tree",
       name: "Árvore",
       svgData: `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <!-- Tree trunk -->
-        <rect fill="none" stroke="black" strokeWidth="2" x="85" y="120" width="30" height="60" />
-        <!-- Tree foliage -->
-        <ellipse fill="none" stroke="black" strokeWidth="2" cx="100" cy="50" rx="40" ry="30" />
-        <ellipse fill="none" stroke="black" strokeWidth="2" cx="70" cy="80" rx="30" ry="25" />
-        <ellipse fill="none" stroke="black" strokeWidth="2" cx="130" cy="80" rx="30" ry="25" />
-        <ellipse fill="none" stroke="black" strokeWidth="2" cx="100" cy="100" rx="45" ry="30" />
-      </svg>`,
+      <!-- Tree trunk -->
+      <rect fill="none" stroke="black" strokeWidth="2" x="85" y="120" width="30" height="60" />
+      <!-- Tree foliage -->
+      <ellipse fill="none" stroke="black" strokeWidth="2" cx="100" cy="50" rx="40" ry="30" />
+      <ellipse fill="none" stroke="black" strokeWidth="2" cx="70" cy="80" rx="30" ry="25" />
+      <ellipse fill="none" stroke="black" strokeWidth="2" cx="130" cy="80" rx="30" ry="25" />
+      <ellipse fill="none" stroke="black" strokeWidth="2" cx="100" cy="100" rx="45" ry="30" />
+    </svg>`,
     },
   ])
 
@@ -224,7 +246,7 @@ export default function DrawingApp() {
         }, 800) // Slightly longer delay to ensure canvas is ready
       }
     }
-  }, [context])
+  }, [context, outlines])
 
   // Admin button press handlers
   const handleAdminButtonPress = () => {
@@ -301,7 +323,7 @@ export default function DrawingApp() {
     }
   }
 
-  // Adicionar a função de preenchimento (flood fill)
+  // Melhorar a função de preenchimento (flood fill) para evitar pixels brancos
   const floodFill = (startX: number, startY: number, fillColor: string) => {
     if (!context || !canvasRef.current) return
 
@@ -334,9 +356,10 @@ export default function DrawingApp() {
     }
 
     // Função para verificar se um pixel tem a mesma cor do pixel inicial
+    // Aumentar a tolerância para garantir que todos os pixels sejam preenchidos
     const isSameColor = (pos: number) => {
-      // Tolerância para comparação de cores
-      const tolerance = 10
+      // Aumentar a tolerância para comparação de cores para evitar pixels brancos
+      const tolerance = 25
       return (
         Math.abs(data[pos] - startR) <= tolerance &&
         Math.abs(data[pos + 1] - startG) <= tolerance &&
@@ -353,7 +376,7 @@ export default function DrawingApp() {
       data[pos + 3] = 255 // Opacidade total
     }
 
-    // Algoritmo de preenchimento (flood fill)
+    // Algoritmo de preenchimento (flood fill) - usar 8 direções em vez de 4
     const stack: [number, number][] = [[startX, startY]]
     const visited = new Set<string>()
 
@@ -374,11 +397,16 @@ export default function DrawingApp() {
       setColor(pos)
       visited.add(key)
 
-      // Adicionar os pixels vizinhos à pilha
+      // Adicionar os pixels vizinhos à pilha (8 direções)
       stack.push([x + 1, y])
       stack.push([x - 1, y])
       stack.push([x, y + 1])
       stack.push([x, y - 1])
+      // Adicionar as diagonais para melhorar o preenchimento
+      stack.push([x + 1, y + 1])
+      stack.push([x - 1, y - 1])
+      stack.push([x + 1, y - 1])
+      stack.push([x - 1, y + 1])
     }
 
     // Atualizar a imagem no canvas
@@ -864,17 +892,102 @@ export default function DrawingApp() {
   const downloadDrawing = () => {
     if (!canvasRef.current) return
 
+    // Criar um canvas temporário para garantir que a imagem seja capturada corretamente
+    const tempCanvas = document.createElement("canvas")
+    const tempCtx = tempCanvas.getContext("2d")
+
+    if (!tempCtx) return
+
+    // Definir o tamanho do canvas temporário igual ao canvas original
+    tempCanvas.width = canvasRef.current.width
+    tempCanvas.height = canvasRef.current.height
+
+    // Preencher com fundo branco para evitar transparência
+    tempCtx.fillStyle = "#FFFFFF"
+    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
+
+    // Desenhar o conteúdo do canvas original no temporário
+    tempCtx.drawImage(canvasRef.current, 0, 0)
+
     // Create a temporary link element
     const link = document.createElement("a")
     link.download = "meu-desenho.png"
 
     // Convert canvas to data URL
-    link.href = canvasRef.current.toDataURL("image/png")
+    link.href = tempCanvas.toDataURL("image/png", 1.0)
 
     // Append to the document, click it, and remove it
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+
+    playAudio("Desenho salvo")
+  }
+
+  // Adicionar função para compartilhar o desenho
+  const shareDrawing = async () => {
+    if (!canvasRef.current) return
+
+    try {
+      // Importante: Precisamos garantir que o canvas seja renderizado corretamente antes de compartilhar
+      // Adicionar um pequeno atraso para garantir que o canvas esteja totalmente renderizado
+      setTimeout(async () => {
+        // Criar um canvas temporário para garantir que a imagem seja capturada corretamente
+        const tempCanvas = document.createElement("canvas")
+        const tempCtx = tempCanvas.getContext("2d")
+
+        if (!tempCtx) return
+
+        // Definir o tamanho do canvas temporário igual ao canvas original
+        tempCanvas.width = canvasRef.current!.width
+        tempCanvas.height = canvasRef.current!.height
+
+        // Preencher com fundo branco para evitar transparência que pode causar tela preta
+        tempCtx.fillStyle = "#FFFFFF"
+        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
+
+        // Desenhar o conteúdo do canvas original no temporário
+        tempCtx.drawImage(canvasRef.current!, 0, 0)
+
+        // Converter o canvas para um blob
+        const blob = await new Promise<Blob>((resolve) => {
+          tempCanvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob)
+              } else {
+                throw new Error("Não foi possível criar o blob da imagem")
+              }
+            },
+            "image/png",
+            1.0,
+          ) // Usar qualidade máxima
+        })
+
+        // Verificar se a API de compartilhamento está disponível
+        if (
+          navigator.share &&
+          navigator.canShare({ files: [new File([blob], "meu-desenho.png", { type: "image/png" })] })
+        ) {
+          // Usar a API Web Share para compartilhar a imagem
+          await navigator.share({
+            title: "Meu Desenho",
+            text: "Veja o desenho que eu fiz no app Alysson Lira!",
+            files: [new File([blob], "meu-desenho.png", { type: "image/png" })],
+          })
+          playAudio("Desenho compartilhado")
+        } else {
+          // Fallback para dispositivos que não suportam a API Web Share
+          // Fazer download da imagem
+          downloadDrawing()
+          playAudio("Desenho salvo")
+        }
+      }, 100) // Pequeno atraso para garantir que o canvas esteja pronto
+    } catch (error) {
+      console.error("Erro ao compartilhar:", error)
+      // Fallback em caso de erro
+      downloadDrawing()
+    }
   }
 
   return (
@@ -882,7 +995,7 @@ export default function DrawingApp() {
       {/* Barra de navegação única */}
       <header className="p-2 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white flex items-center shadow-lg">
         {/* Nome do sistema à esquerda com crédito abaixo */}
-        <div className="mr-6">
+        <div className="mr-6 flex-shrink-0">
           <h1
             className="text-xl font-bold cursor-pointer"
             onMouseDown={handleAdminButtonPress}
@@ -890,16 +1003,19 @@ export default function DrawingApp() {
             onTouchStart={handleAdminButtonPress}
             onTouchEnd={handleAdminButtonRelease}
           >
-            Allyson Lira
+            Alysson Lira
           </h1>
           <div className="text-xs opacity-70">Desenvolvido por Fabiano Lira</div>
         </div>
-        <div className="flex items-center space-x-3 mx-auto">
+        <div
+          className="flex items-center space-x-3 overflow-x-auto pb-2 scrollbar-hide touch-pan-x snap-x snap-mandatory"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           <Button
             variant={tool === "brush" ? "default" : "outline"}
             size="icon"
             onClick={() => handleToolSelect("brush")}
-            className={`h-12 w-12 rounded-full ${
+            className={`h-12 w-12 rounded-full flex-shrink-0 snap-center ${
               tool === "brush" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
             }`}
             title="Pincel"
@@ -912,7 +1028,7 @@ export default function DrawingApp() {
             variant={tool === "eraser" ? "default" : "outline"}
             size="icon"
             onClick={() => handleToolSelect("eraser")}
-            className={`h-12 w-12 rounded-full ${
+            className={`h-12 w-12 rounded-full flex-shrink-0 snap-center ${
               tool === "eraser" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
             }`}
             title="Borracha"
@@ -925,7 +1041,7 @@ export default function DrawingApp() {
             variant={tool === "fill" ? "default" : "outline"}
             size="icon"
             onClick={() => handleToolSelect("fill")}
-            className={`h-12 w-12 rounded-full ${
+            className={`h-12 w-12 rounded-full flex-shrink-0 snap-center ${
               tool === "fill" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
             }`}
             title="Balde de Tinta"
@@ -938,7 +1054,7 @@ export default function DrawingApp() {
             variant={tool === "line" ? "default" : "outline"}
             size="icon"
             onClick={() => handleToolSelect("line")}
-            className={`h-12 w-12 rounded-full ${
+            className={`h-12 w-12 rounded-full flex-shrink-0 snap-center ${
               tool === "line" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
             }`}
             title="Linha"
@@ -951,7 +1067,7 @@ export default function DrawingApp() {
             variant={tool === "circle" ? "default" : "outline"}
             size="icon"
             onClick={() => handleToolSelect("circle")}
-            className={`h-12 w-12 rounded-full ${
+            className={`h-12 w-12 rounded-full flex-shrink-0 snap-center ${
               tool === "circle" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
             }`}
             title="Círculo"
@@ -964,7 +1080,7 @@ export default function DrawingApp() {
             variant={tool === "square" ? "default" : "outline"}
             size="icon"
             onClick={() => handleToolSelect("square")}
-            className={`h-12 w-12 rounded-full ${
+            className={`h-12 w-12 rounded-full flex-shrink-0 snap-center ${
               tool === "square" ? "bg-white text-purple-600" : "bg-purple-600/20 text-white hover:bg-purple-600/40"
             }`}
             title="Quadrado"
@@ -974,7 +1090,7 @@ export default function DrawingApp() {
           </Button>
 
           {/* Botão de espessura */}
-          <div className="relative">
+          <div className="relative flex-shrink-0 snap-center">
             <Button
               variant="outline"
               size="icon"
@@ -1015,11 +1131,23 @@ export default function DrawingApp() {
             variant="outline"
             size="icon"
             onClick={clearCanvas}
-            className="h-12 w-12 rounded-full bg-red-500/80 text-white hover:bg-red-600"
+            className="h-12 w-12 rounded-full flex-shrink-0 snap-center bg-red-500/80 text-white hover:bg-red-600"
             title="Limpar Tudo"
           >
             <Trash2 className="h-6 w-6" />
             <span className="sr-only">Limpar</span>
+          </Button>
+
+          {/* Botão de compartilhar */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={shareDrawing}
+            className="h-12 w-12 rounded-full flex-shrink-0 snap-center bg-green-500/80 text-white hover:bg-green-600"
+            title="Compartilhar"
+          >
+            <Share2 className="h-6 w-6" />
+            <span className="sr-only">Compartilhar</span>
           </Button>
         </div>
       </header>

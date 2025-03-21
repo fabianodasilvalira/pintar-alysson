@@ -4,14 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader } from "@/components/ui/dialog"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -25,58 +18,33 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
   const [error, setError] = useState("")
 
   const handleLogin = () => {
-    // Check credentials
-    if (username === "fabiano" && password === "admin123") {
+    if (username === "fabiano" && password === "123456") {
       onLogin(true)
       onClose()
     } else {
-      setError("Credenciais inválidas. Tente novamente.")
-      onLogin(false)
+      setError("Usuário ou senha incorretos.")
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-gradient-to-b from-purple-50 to-blue-50 rounded-xl">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-purple-700">Acesso Administrativo</DialogTitle>
-          <DialogDescription>Entre com suas credenciais para acessar o painel administrativo.</DialogDescription>
+          <h3 className="text-lg font-medium">Login Administrativo</h3>
+          <DialogDescription>Insira suas credenciais para acessar o painel administrativo.</DialogDescription>
         </DialogHeader>
+        {error && <p className="text-sm font-medium text-destructive mb-4">{error}</p>}
         <div className="grid gap-4 py-4">
-          {error && <p className="text-sm font-medium text-destructive bg-red-50 p-2 rounded-md">{error}</p>}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="username" className="text-right text-purple-700">
-              Usuário
-            </Label>
-            <Input
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="col-span-3 border-purple-200 focus:border-purple-400"
-            />
+          <div className="grid w-full items-center gap-1.5">
+            <Label htmlFor="username">Usuário</Label>
+            <Input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="password" className="text-right text-purple-700">
-              Senha
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="col-span-3 border-purple-200 focus:border-purple-400"
-            />
+          <div className="grid w-full items-center gap-1.5">
+            <Label htmlFor="password">Senha</Label>
+            <Input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
         </div>
-        <DialogFooter>
-          <Button
-            type="submit"
-            onClick={handleLogin}
-            className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600"
-          >
-            Entrar
-          </Button>
-        </DialogFooter>
+        <Button onClick={handleLogin}>Entrar</Button>
       </DialogContent>
     </Dialog>
   )
